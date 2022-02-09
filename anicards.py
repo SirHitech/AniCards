@@ -1,13 +1,15 @@
-import requests
+import configparser
+import io
 import json
 import os
-from os.path import exists
-import PySimpleGUI as sg
-import io
-from PIL import Image
-from io import BytesIO
 import random
-import configparser
+from io import BytesIO
+from os.path import exists
+
+import PySimpleGUI as sg
+import requests
+from PIL import Image
+
 
 version = "1.0.0"
 
