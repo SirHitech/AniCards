@@ -11,7 +11,7 @@ import requests
 from PIL import Image
 
 
-version = "1.0.0"
+version = "1.0.1"
 
 workingFolder = os.getcwd() + "\\"
 animeImagesFolder = workingFolder + "AnimeImages\\"
@@ -101,7 +101,6 @@ class Anime:
         self.format = format
         self.image = imageURL
         self.progress = progress
-        self.pullImage()
 
     def __str__(self):
         return self.getTitle()
@@ -190,12 +189,16 @@ def fetchCharacterInfo(id):
     x = 1
     while True:
         characterRepsonse = requests.post(url, json={'query': characterQuery.format(id, x)})
-        x += 1
         charDict = json.loads(characterRepsonse.text)
-
         charactersList = charDict['data']['Media']['characters']["edges"]
+        
+        windowLoadingBar = createLoadingWindow(len(charactersList)-1, "Downloading page {0} of characters {1}/{2}".format(x, 1, len(charactersList)-1))
+        progressBar = windowLoadingBar['progress']
+        windowLoadingBar.read(timeout=0)
+        prog = 0
 
         if len(charactersList) == 0:
+            windowLoadingBar.close()
             break
         else:
             for character in charactersList:
@@ -207,6 +210,11 @@ def fetchCharacterInfo(id):
                 else:
                     supportCharactersList.append(c)
                 c.pullImage()
+                prog += 1
+                progressBar.update(prog)
+                windowLoadingBar["-ProgressText-"].update("Downloading page {0} of characters: {1}/{2}".format(x, prog + 1, len(charactersList)-1))
+        windowLoadingBar.close()
+        x += 1
 
 def pullCharacter():
     if random.randint(1, 5) == 5:
@@ -364,6 +372,31 @@ animeHasPacksList = []
 animeNoPacksList = []
 
 sortAnimeLists()
+
+def createLoadingWindow(maxValue, labelText):
+    layoutLoadingBar = [[sg.Text(labelText, key="-ProgressText-")],
+        [sg.ProgressBar(maxValue, orientation='h', size=(20, 20), key='progress')],]
+    return sg.Window("AniCards " + version, layoutLoadingBar)
+
+windowLoadingBar = createLoadingWindow(len(animeHasPacksList) + len(animeNoPacksList), "Downloading images from Anilist ")
+progressBar = windowLoadingBar['progress']
+event, values = windowLoadingBar.read(timeout=0)
+
+prog = 0
+
+for anime in animeHasPacksList:
+    anime.pullImage()
+    prog += 1
+    progressBar.update(prog)
+    windowLoadingBar["-ProgressText-"].update("Downloading images from Anilist: {0}/{1}".format(prog, len(animeHasPacksList) + len(animeNoPacksList)))
+
+for anime in animeNoPacksList:
+    anime.pullImage()
+    prog += 1
+    progressBar.update(prog)
+    windowLoadingBar["-ProgressText-"].update("Downloading images from Anilist: {0}/{1}".format(prog, len(animeHasPacksList) + len(animeNoPacksList)))
+
+windowLoadingBar.close()
 
 anime_list_column = [
     [
