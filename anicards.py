@@ -39,7 +39,7 @@ if exists(workingFolder + "config.ini"):
     config.read(workingFolder + "config.ini")
 else:
     config['DEFAULT'] = {
-        'Show Duplicates': 'yes'
+        'Hide Duplicates': 'yes'
     }
     config['User'] = {
         'AnilistID': '0'
@@ -279,25 +279,40 @@ def resizeAsBytesIO(imageToResize, x, y):
 
 def loadImages(animeID, startCardIndex):
     global totalCards
-    totalCards = packsOpened[animeID]
-
-    allCardsIDs = []
 
     if animeID not in rarecardCollection:
-        rarecardCollection[animeID] = {}
+            rarecardCollection[animeID] = {}
     if animeID not in cardCollection:
         cardCollection[animeID] = {}
 
-    for card in rarecardCollection[animeID].keys():
-        for x in range(rarecardCollection[animeID][card]):
+    allCardsIDs = []
+
+    loadBlankImages()
+
+    if values['-HIDE DUPES-']:
+        totalCards = len(rarecardCollection[animeID]) + len(cardCollection[animeID])
+
+        for card in rarecardCollection[animeID].keys():
             allCardsIDs.append(card)
 
-    for card in cardCollection[animeID].keys():
-        for x in range(cardCollection[animeID][card]):
+        for card in cardCollection[animeID].keys():
             allCardsIDs.append(card)
 
-    for x in range(min(4, totalCards - startCardIndex)):
-        window["-CARD {}-".format(x)].update(getImagePathForCharacter(allCardsIDs[startCardIndex + x]))
+        for x in range(min(4, totalCards - startCardIndex)):
+            window["-CARD {}-".format(x)].update(getImagePathForCharacter(allCardsIDs[startCardIndex + x]))
+    else:
+        totalCards = packsOpened[animeID]
+
+        for card in rarecardCollection[animeID].keys():
+            for x in range(rarecardCollection[animeID][card]):
+                allCardsIDs.append(card)
+
+        for card in cardCollection[animeID].keys():
+            for x in range(cardCollection[animeID][card]):
+                allCardsIDs.append(card)
+
+        for x in range(min(4, totalCards - startCardIndex)):
+            window["-CARD {}-".format(x)].update(getImagePathForCharacter(allCardsIDs[startCardIndex + x]))
 
 def loadBlankImages():
     for x in range(4):
@@ -318,6 +333,9 @@ def writeDataToFiles():
     rarecollectionJson = json.dumps(rarecardCollection)
     rarecollectionFile.write(rarecollectionJson)
     rarecollectionFile.close()
+
+    with open(workingFolder + "config.ini", 'w') as configfile:
+        config.write(configfile)
 
 query = ''' query {{
   MediaListCollection(userId: {0}, type: ANIME, sort: MEDIA_TITLE_ENGLISH) {{
@@ -425,12 +443,19 @@ card_viewer = [
     ]
 ]
 
+settings = [
+    [
+        sg.Checkbox("Hide duplicates", default=config["DEFAULT"]["Hide Duplicates"] == 'True', key="-HIDE DUPES-", enable_events=True)
+    ]
+]
+
 # ----- Full layout -----
 layout = [
     [
         sg.Column(anime_list_column),
         sg.Column(pack_opening_column),
-        sg.Column(card_pulled_column, justification='c')
+        sg.Column(card_pulled_column, justification='c'),
+        sg.Column(settings)
     ],
     [
         sg.Button("<", size=(3,3)),
@@ -441,7 +466,9 @@ layout = [
 
 window = sg.Window("AniCards " + version, layout)
 
-
+animeSelected = None
+startCardIndex = 0
+totalCards = 0
 
 # Run the Event Loop
 while True:
@@ -492,16 +519,20 @@ while True:
                 window["-FILE LIST-"].update(values=animeHasPacksList + animeNoPacksList)
     
     elif event == "<":
-        if startCardIndex != 0:
+        if startCardIndex != 0 and animeSelected is not None:
             startCardIndex -= 1
             loadImages(animeSelected.id, startCardIndex)
     
     elif event == ">":
-        if startCardIndex + 4 != totalCards:
+        if startCardIndex + 4 < totalCards and animeSelected is not None:
             startCardIndex += 1
             loadImages(animeSelected.id, startCardIndex)
-        
 
+    elif event == "-HIDE DUPES-":
+        config["DEFAULT"]["Hide Duplicates"] = str(values['-HIDE DUPES-'])
+        if animeSelected is not None:
+            startCardIndex = 0
+            loadImages(animeSelected.id, startCardIndex)
 
 window.close()
 
