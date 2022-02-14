@@ -11,7 +11,7 @@ import requests
 from PIL import Image
 
 
-version = "1.0.1"
+version = "v1.0.2"
 
 workingFolder = os.getcwd() + "\\"
 animeImagesFolder = workingFolder + "AnimeImages\\"
