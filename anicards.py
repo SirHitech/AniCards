@@ -11,7 +11,7 @@ import requests
 from PIL import Image
 
 
-version = "v1.0.2"
+version = "v1.0.3"
 
 workingFolder = os.getcwd() + "\\"
 animeImagesFolder = workingFolder + "AnimeImages\\"
@@ -423,9 +423,9 @@ anime_list_column = [
 ]
 
 pack_opening_column = [
-    [sg.Text("Select a pack from the list on the left", size=(30, 2), key="-TITLE-")],
     [sg.Image(uiFolder + "nopack.png", key="-ANIMEIMAGE-")],
-    [sg.Button('Open Pack', size=(30,2), key="-OPEN PACK-")],
+    [sg.Button('Open Pack', size=(30,2), disabled=True, key="-OPEN PACK-")],
+    [sg.Button('Reveal', size=(30,2), disabled=True, key="-REVEAL-")],
     [sg.Text(size=(30, 1), key="-PACKS LEFT-")]
 ]
 
@@ -485,11 +485,15 @@ while True:
 
             fetchCharacterInfo(animeSelected.id)
 
-            window["-TITLE-"].update(animeSelected)
             window["-ANIMEIMAGE-"].update(filename=filename)
             window["-PACKS LEFT-"].update("Unopened Packs: " + str(animeSelected.progress - packsOpened[animeSelected.id]))
             window["-PULLED CARD-"].update(filename=uiFolder + "default.png")
             window["-CHARACTER NAME-"].update("")
+            if animeSelected in animeHasPacksList and packsOpened[animeSelected.id] != animeSelected.progress:
+                window["-OPEN PACK-"].update(disabled=False)
+            else:
+                window["-OPEN PACK-"].update(disabled=True)
+            window["-REVEAL-"].update(disabled=True)
 
             startCardIndex = 0
             loadBlankImages()
@@ -506,18 +510,28 @@ while True:
                 rarity = "Rare: "
                 characterPulled = random.choice(mainCharactersList)
                 addPullToRareCollection(animeSelected.id, characterPulled.id)
+                window["-PULLED CARD-"].update(filename=uiFolder + "rainbow_back.png")
             else:
                 rarity = "Common: "
                 characterPulled = random.choice(supportCharactersList)
                 addPullToCollection(animeSelected.id, characterPulled.id)
-            loadImages(animeSelected.id, startCardIndex)
+                window["-PULLED CARD-"].update(filename=uiFolder + "silver_back.png")
             window["-PACKS LEFT-"].update("Unopened Packs: " + str(animeSelected.progress - packsOpened[animeSelected.id]))
-            window["-PULLED CARD-"].update(filename=getImagePathForCharacter(characterPulled.id))
-            window["-CHARACTER NAME-"].update(rarity + characterPulled.getName())
+            window["-CHARACTER NAME-"].update("")
+            window["-OPEN PACK-"].update(disabled=True)
+            window["-REVEAL-"].update(disabled=False)
             if animeSelected in animeHasPacksList and packsOpened[animeSelected.id] == animeSelected.progress:
                 sortAnimeLists()
                 window["-FILE LIST-"].update(values=animeHasPacksList + animeNoPacksList)
-    
+
+    elif event == "-REVEAL-":
+        if animeSelected in animeHasPacksList and packsOpened[animeSelected.id] != animeSelected.progress:
+            window["-OPEN PACK-"].update(disabled=False)
+        window["-REVEAL-"].update(disabled=True)
+        loadImages(animeSelected.id, startCardIndex)
+        window["-PULLED CARD-"].update(filename=getImagePathForCharacter(characterPulled.id))
+        window["-CHARACTER NAME-"].update(rarity + characterPulled.getName())
+
     elif event == "<":
         if startCardIndex != 0 and animeSelected is not None:
             startCardIndex -= 1
